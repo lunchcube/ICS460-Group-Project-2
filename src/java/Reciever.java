@@ -39,7 +39,7 @@ public class Reciever
 		windowSize = Integer.parseInt(JOptionPane.showInputDialog("What is the window size?"));
 		maxPacketSize = Integer.parseInt(JOptionPane.showInputDialog("What is the packet size in bytes?"));
 
-		receiver.setFilename("./received/receivedfile.txt");
+		receiver.setFilename("./received/received.txt");
 		receiver.receiveFile();
 	}
 
@@ -128,9 +128,7 @@ public class Reciever
 
 	}
 
-	private void acceptPacket(int seq_num, int eop, int last_packet, byte[] payload)
-	{
-//		System.out.println("Received'"+new String(payload)+"' from " +sender);
+	private void acceptPacket(int seq_num, int eop, int last_packet, byte[] payload) {
 
 		if(last_frame_received >= seq_num){
 			sendACK(seq_num);
@@ -151,7 +149,7 @@ public class Reciever
 					System.out.println("Message #" + seq_num + " received.");
 					processPayload(last_frame_received, received_bytes[i]);
 					sendACK(last_frame_received);
-					System.out.println("Sent acknowledgement for message #"+seq_num);
+					System.out.println("Sent acknowledgement for message #" + seq_num + "\n");
 				}
 				else
 				{

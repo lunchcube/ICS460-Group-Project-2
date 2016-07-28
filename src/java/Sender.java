@@ -19,7 +19,7 @@ public class Sender {
     private int maxPacketSize;
 	private int maxNumFrames;
     private int lastSeqNum;
-    private String filename;
+    public static String filename;
     private byte[] data;
     private boolean initial_connection = false;
     private long file_size=0;
