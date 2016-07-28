@@ -4,7 +4,7 @@ public class TimeoutSender extends Thread
 {
 	private int timeout;
 	private int elapsed;
-	public int rate = 100;
+	public int rate = 1000;
 	public boolean finished;
 	public int seq_num;
 	private Sender sender;
@@ -43,7 +43,7 @@ public class TimeoutSender extends Thread
 
 	public void timeout()
 	{
-		System.out.println("Message #"+this.seq_num+" timed out. Resending...");
+		System.out.println("Message #" + this.seq_num + " timed out. Resending...");
 		sender.transmit(this.seq_num);
 		reset();
 	}

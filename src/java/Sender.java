@@ -91,11 +91,11 @@ public class Sender {
 			if(!probability(packetDropChance))
 			{
 				socket.send(datagram);
-				System.out.println("Sent message #" +seqNum + ". Length= "+dataPart.length+" bytes");
+				System.out.println("Sent message #" +seqNum + ".");
 			}
 			else
 			{
-				System.out.println("Dropped message #" +seqNum + ". Length= " + dataPart.length + " bytes");
+				System.out.println("Dropped message #" +seqNum + ".");
 			}
 		}
 		catch (IOException e)
@@ -161,7 +161,7 @@ public class Sender {
 			System.out.println("Listening on: "+packet.getAddress()+":"+packet.getPort());
 		}
 
-		System.out.println("Recieved  acknowledgment for message #"+seq_num);
+		System.out.println("Recieved  acknowledgment for message #" + seq_num + "\n");
 
 		if(seq_num>last_ack_received)
 		{

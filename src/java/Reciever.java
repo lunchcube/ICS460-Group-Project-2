@@ -68,7 +68,7 @@ public class Reciever
 
 	private boolean sendACK(int seq_num)
 	{
-		byte[] ack = intToBytes(seq_num);
+		byte[] ack = intToByteArray(seq_num);
 		try
 		{
 			socket.send(new DatagramPacket(ack, ack.length, this.sender, sendingPort));
@@ -97,9 +97,9 @@ public class Reciever
 		System.arraycopy(packetData, 0, seq_num_bytes, 0, seq_num_bytes.length);
 		System.arraycopy(packetData, seq_num_bytes.length, eop_bytes, 0, eop_bytes.length);
 		System.arraycopy(packetData, seq_num_bytes.length+eop_bytes.length, last_packet_bytes, 0, last_packet_bytes.length);
-		int seq_num = bytesToInt(seq_num_bytes);
-		int eop = bytesToInt(eop_bytes);
-		int last_packet = bytesToInt(last_packet_bytes);
+		int seq_num = byteArrayToInt(seq_num_bytes);
+		int eop = byteArrayToInt(eop_bytes);
+		int last_packet = byteArrayToInt(last_packet_bytes);
 
 		if(seq_num==0 && !initial_connection){
 			initial_connection = true;
@@ -130,7 +130,7 @@ public class Reciever
 
 	private void acceptPacket(int seq_num, int eop, int last_packet, byte[] payload)
 	{
-		System.out.println("Received'"+new String(payload)+"' from " +sender);
+//		System.out.println("Received'"+new String(payload)+"' from " +sender);
 
 		if(last_frame_received >= seq_num){
 			sendACK(seq_num);
@@ -148,10 +148,10 @@ public class Reciever
 					last_frame_received+=1;
 					largest_acceptable_frame+=1;
 					this.file_size+=payload.length;
-					System.out.println("Message #" + seq_num + " received. Length="+payload.length+" bytes");
+					System.out.println("Message #" + seq_num + " received.");
 					processPayload(last_frame_received, received_bytes[i]);
 					sendACK(last_frame_received);
-					System.out.println("sent acknowledgement for message #"+seq_num);
+					System.out.println("Sent acknowledgement for message #"+seq_num);
 				}
 				else
 				{
@@ -182,7 +182,8 @@ public class Reciever
 				this.fileOut.close();
 				this.end_time = System.currentTimeMillis();
 				double runtime = ((this.end_time-this.start_time)/(double)1000);
-				System.out.println("Successfully received "+this.filename+" ("+this.file_size+" bytes) in "+runtime+" seconds");
+				System.out.println("Successfully received " + this.filename + " (" + this.file_size + " bytes) in "
+				    + runtime + " seconds");
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -191,18 +192,15 @@ public class Reciever
 
 	}
 
-	public void receiveFile()
-	{
-		try
-		{
+	public void receiveFile() {
+
+		try {
 			System.out.println("Receiver listening on UDP port " + this.port);
             this.socket = new DatagramSocket(port);
             calculatePackets();
             this.fileOut = new FileOutputStream(new File(this.filename));
             new PacketReceiver(this);
-        }
-        catch(Exception e)
-		{
+        } catch(Exception e) {
         	e.printStackTrace();
         }
 	}
@@ -221,7 +219,7 @@ public class Reciever
 
 	}
 
-	public static byte[] intToBytes(int data) {
+	public static byte[] intToByteArray(int data) {
 		return new byte[] {
 		(byte)((data >> 24) & 0xff),
 		(byte)((data >> 16) & 0xff),
@@ -230,7 +228,7 @@ public class Reciever
 		};
 	}
 
-	public static int bytesToInt(byte[] data) {
+	public static int byteArrayToInt(byte[] data) {
 		if (data == null || data.length != 4) return 0x0;
 		// ----------
 		return (int)(
