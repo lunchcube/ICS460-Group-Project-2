@@ -3,10 +3,13 @@
 import java.io.*;
 import java.net.*;
 
+import javax.swing.*;
+
 public class PacketReceiver implements Runnable {
 
 	private Reciever reciever;
 	Thread thread;
+	int sleepTime = Integer.parseInt(JOptionPane.showInputDialog("How much time between receiver messages printing to screen?"));
 
 	public PacketReceiver(Reciever reciever) {
 
@@ -24,8 +27,8 @@ public class PacketReceiver implements Runnable {
 				DatagramPacket packet = new DatagramPacket(bytesIn,bytesIn.length);
 				reciever.socket.receive(packet);
 				reciever.processPacket(packet);
-				//thread.sleep(5000);  //Change this to delay messages being shown on the screen.
-			} catch (IOException e) {
+				thread.sleep(sleepTime);  //Change this to delay messages being shown on the screen.
+			} catch (IOException | InterruptedException e) {
 				e.printStackTrace();
 			}
 		}

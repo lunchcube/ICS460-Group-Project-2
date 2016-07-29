@@ -23,16 +23,14 @@ public class TimeoutSender extends Thread
 
 	public void run() {
 		while(!finished) {
-			try
-			{
+			try {
 				Thread.sleep(rate);
 			}
 			catch (InterruptedException ioe) {
 				continue;
 			}
 
-			synchronized (this)
-			{
+			synchronized (this) {
 				elapsed += rate;
 				if (elapsed > this.timeout){
 					timeout();

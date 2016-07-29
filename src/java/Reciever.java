@@ -5,8 +5,8 @@ import java.net.*;
 import javax.swing.*;
 
 
-public class Reciever
-{
+public class Reciever {
+
     private int headerSize = 12;
     public  DatagramSocket socket;
 	private InetAddress sender;
@@ -15,16 +15,11 @@ public class Reciever
     private static long windowSize;
     public static int maxPacketSize;
 
-	public int getMaxPacketSize() {
-		return maxPacketSize;
-	}
-
-
 	private int max_num_frames;
     private int last_seq_num = -1;
     private int[] receivedPacketsArray;
     private byte[][] received_bytes;
-    private String filename = "received";
+    private String filename = null;
     private FileOutputStream fileOut;
     private boolean initial_connection = false;
     private long file_size=0;
@@ -38,8 +33,8 @@ public class Reciever
 		Reciever receiver = new Reciever();
 		windowSize = Integer.parseInt(JOptionPane.showInputDialog("What is the window size?"));
 		maxPacketSize = Integer.parseInt(JOptionPane.showInputDialog("What is the packet size in bytes?"));
-
-		receiver.setFilename("./received/received.txt");
+		receiver.filename = ("./received/" + JOptionPane.showInputDialog("What is the received file name?"));
+		System.out.println("receiver filename: " + receiver.filename);
 		receiver.receiveFile();
 	}
 
@@ -66,23 +61,18 @@ public class Reciever
 		}
 	}
 
-	private boolean sendACK(int seq_num)
-	{
+	private boolean sendACK(int seq_num) {
 		byte[] ack = intToByteArray(seq_num);
-		try
-		{
+		try {
 			socket.send(new DatagramPacket(ack, ack.length, this.sender, sendingPort));
 			return true;
-		}
-		catch (IOException e)
-		{
+		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
 		}
 	}
 
-	public void processPacket(DatagramPacket packet)
-	{
+	public void processPacket(DatagramPacket packet) {
 		this.sender = packet.getAddress();
 		this.sendingPort = packet.getPort();
 
@@ -112,20 +102,16 @@ public class Reciever
 			payload = new byte[(maxPacketSize - headerSize)];
 			System.arraycopy(packetData, headerSize, payload, 0, payload.length);
 		}
-		else
-		{
+		else {
 			this.last_seq_num = seq_num;
 			payload = new byte[eop-headerSize];
-
 			System.arraycopy(packetData, headerSize, payload, 0, eop-headerSize);
 		}
 
 		boolean acceptPacket = (seq_num<=largest_acceptable_frame);
-		if (acceptPacket)
-		{
+		if (acceptPacket) {
 			acceptPacket(seq_num, eop, last_packet, payload);
 		}
-
 	}
 
 	private void acceptPacket(int seq_num, int eop, int last_packet, byte[] payload) {
@@ -133,16 +119,13 @@ public class Reciever
 		if(last_frame_received >= seq_num){
 			sendACK(seq_num);
 		}
-		else
-		{
+		else {
 			receivedPacketsArray[seq_num-last_frame_received-1] = 1;
 			received_bytes[seq_num-last_frame_received-1] = payload;
 			int adjustedWindow = 0;
 			int i_val = 0;
-			for (int i = 0; i < receivedPacketsArray.length; i++)
-			{
-				if(receivedPacketsArray[i]==1)
-				{
+			for (int i = 0; i < receivedPacketsArray.length; i++) {
+				if(receivedPacketsArray[i]==1) {
 					last_frame_received+=1;
 					largest_acceptable_frame+=1;
 					this.file_size+=payload.length;
@@ -151,21 +134,18 @@ public class Reciever
 					sendACK(last_frame_received);
 					System.out.println("Sent acknowledgement for message #" + seq_num + "\n");
 				}
-				else
-				{
+				else {
 					adjustedWindow = i;
 					break;
 				}
 				i_val = i;
 			}
 
-			if(i_val==receivedPacketsArray.length-1)
-			{
+			if(i_val==receivedPacketsArray.length-1) {
 				adjustedWindow = receivedPacketsArray.length;
 			}
 
-			for (int i = 0; i < adjustedWindow; i++)
-			{
+			for (int i = 0; i < adjustedWindow; i++) {
 				receivedPacketsArray[i]=0;
 			}
 		}
@@ -187,7 +167,6 @@ public class Reciever
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
 	}
 
 	public void receiveFile() {
@@ -214,7 +193,6 @@ public class Reciever
 
 	public void setFilename(String fname) {
 		this.filename = fname;
-
 	}
 
 	public static byte[] intToByteArray(int data) {
@@ -235,10 +213,5 @@ public class Reciever
 		(0xff & data[2]) << 8 |
 		(0xff & data[3]) << 0
 		);
-	}
-
-
-	public void setMax_packet_size(int max_packet_size) {
-		this.maxPacketSize = max_packet_size;
 	}
 }

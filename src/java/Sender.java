@@ -47,7 +47,6 @@ public class Sender {
 
 	private void calculatePackets() {
 		try {
-
 			int mtu = socket.getSendBufferSize();
 			int result = (int)Math.ceil(windowSize/(double)mtu);
 			if (result==1) {
@@ -86,23 +85,17 @@ public class Sender {
 
 		DatagramPacket datagram = new DatagramPacket(packetToSend, packetToSend.length, receiver.getAddress(), receiver.getPort());
 
-		try
-		{
-			if(!probability(packetDropChance))
-			{
+		try {
+			if(!probability(packetDropChance)) {
 				socket.send(datagram);
 				System.out.println("Sent message #" +seqNum + ".");
 			}
-			else
-			{
+			else {
 				System.out.println("Dropped message #" +seqNum + ".");
 			}
-		}
-		catch (IOException e)
-		{
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
 	}
 
 	private byte[] getData(int seq_num){
@@ -112,22 +105,18 @@ public class Sender {
 		int end = start + (room_for_data - 1);
 		int dataLength = this.data.length;
 
-		if(end<=dataLength){
+		if(end <= dataLength) {
 			subData = new byte[room_for_data];
 			System.arraycopy(this.data, start, subData, 0, room_for_data);
 		}
-		else{
-
+		else {
 			subData = new byte[dataLength-start];
 			System.arraycopy(this.data, start, subData, 0, dataLength-start);
 		}
-
 		return subData;
-
 	}
 
 	private void prepareFile() throws Exception{
-
 
 		File filepath = new File(this.filename);
         InputStream is = new FileInputStream(filepath);
@@ -140,59 +129,48 @@ public class Sender {
 
         int offset = 0;
         int numRead = 0;
-        while (offset < this.data.length && (numRead=is.read(this.data, offset, this.data.length-offset)) >= 0)
-        {
+        while (offset < this.data.length && (numRead=is.read(this.data, offset, this.data.length-offset)) >= 0) {
         	offset += numRead;
         }
-        if (offset < this.data.length)
-        {
-            throw new Exception("Could not completely read file "+filepath.getName());
+        if (offset < this.data.length) {
+            throw new Exception("Could not completely read file " + filepath.getName());
         }
-
         is.close();
 	}
 
 	public void processACK(DatagramPacket packet) {
 		int seq_num = bytesToInt(packet.getData());
 
-		if(seq_num==0 && !initial_connection)
-		{
+		if(seq_num == 0 && !initial_connection) {
 			initial_connection = true;
 			System.out.println("Listening on: "+packet.getAddress()+":"+packet.getPort());
 		}
-
 		System.out.println("Recieved  acknowledgment for message #" + seq_num + "\n");
 
-		if(seq_num>last_ack_received)
-		{
+		if(seq_num>last_ack_received) {
 			this.last_ack_received = seq_num;
-
 			updateTimeoutThreads(seq_num);
 		}
 	}
 
-	private void updateTimeoutThreads(int seq_num)
-	{
+	private void updateTimeoutThreads(int seq_num) {
 		for (int i = 0; i < sender_window.length; i++)
 		{
 			if(sender_window[i]!=null){
-
 				TimeoutSender timeout_thread = sender_window[i];
 
-				if(timeout_thread.seq_num<=seq_num)
-				{
+				if(timeout_thread.seq_num<=seq_num) {
 					timeout_thread.finished=true;
-
-					last_frame_sent+=1;
-					if(last_frame_sent<=lastSeqNum)
-					{
+					last_frame_sent += 1;
+					if(last_frame_sent <= lastSeqNum) {
 						transmit(last_frame_sent);
 						sender_window[i] = new TimeoutSender(last_frame_sent, (int)timeout, this);
-					}//end if
-					else{
+					} //end if
+					else {
 						this.end_time = System.currentTimeMillis();
 						double runtime = ((this.end_time-this.start_time)/(double)1000);
-						System.out.println("Successfully transferred "+this.filename+" ("+this.file_size+" bytes) in "+runtime+" seconds");
+						System.out.println("Successfully transferred " + this.filename + " (" + this.file_size
+						    + " bytes) in " + runtime + " seconds");
 					}
 				}
 			}
@@ -279,11 +257,6 @@ public class Sender {
 		(0xff & data[2]) << 8 |
 		(0xff & data[3]) << 0
 		);
-	}
-
-    public int getMax_packet_size()
-    {
-		return maxPacketSize;
 	}
 
 	public int getProbabilityOfDrop() {
