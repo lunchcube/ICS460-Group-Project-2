@@ -9,26 +9,26 @@ import javax.swing.*;
 
 public class Sender {
 
-	private int headerSize = 12;
+	private int headSize = 12;
 	DatagramSocket socket;
-    private int receiverPort = 1025;
-    private int senderPort = 1024;
-    private InetSocketAddress receiver = new InetSocketAddress("localhost", receiverPort);
+    private int receivePort = 1025;
+    private int sendPort = 1024;
+    private InetSocketAddress receiver = new InetSocketAddress("localhost", receivePort);
     private long windowSize;
     private long timeout;
-    private int maxPacketSize;
+    private int maxPackSize;
 	private int maxNumFrames;
     private int lastSeqNum;
     public static String filename;
     private byte[] data;
     private boolean initial_connection = false;
-    private long file_size=0;
-    private long start_time;
-    private long end_time;
-    private int last_ack_received = -1;
-    private int last_frame_sent = -1;
-    private TimeoutSender[] sender_window;
-    private int packetDropChance = 0;
+    private long fileSize=0;
+    private long startTime;
+    private long endTime;
+    private int lastAckRec = -1;
+    private int lastFrameSent = -1;
+    private TimeoutSender[] sendWindow;
+    private int packDrop = 0;
 
 	public Sender() {
 		super();
@@ -37,9 +37,9 @@ public class Sender {
 	public static void main(String[] args) {
 		Sender sender = new Sender();
 		sender.windowSize = Integer.parseInt(JOptionPane.showInputDialog("What is the sender window size?"));
-		sender.maxPacketSize = Integer.parseInt(JOptionPane.showInputDialog("What is the packet size in bytes?"));
+		sender.maxPackSize = Integer.parseInt(JOptionPane.showInputDialog("What is the packet size in bytes?"));
 		sender.timeout = Integer.parseInt(JOptionPane.showInputDialog("What is the timeout in MS?"));
-		sender.packetDropChance = Integer.parseInt(JOptionPane.showInputDialog("What is the chance of packet drop?"));
+		sender.packDrop = Integer.parseInt(JOptionPane.showInputDialog("What is the chance of packet drop?"));
 
         sender.setFilename(JOptionPane.showInputDialog("What is the filename to be sent?"));
 		sender.sendFile();
@@ -55,9 +55,9 @@ public class Sender {
 			else {
 				this.maxNumFrames = (int)Math.floor(windowSize/(double)mtu);
 			}
-			this.sender_window = new TimeoutSender[maxNumFrames];
-			for (int i = 0; i < sender_window.length; i++) {
-				this.sender_window[i]=null;
+			this.sendWindow = new TimeoutSender[maxNumFrames];
+			for (int i = 0; i < sendWindow.length; i++) {
+				this.sendWindow[i]=null;
 			}
 		} catch (SocketException e) {
 			e.printStackTrace();
@@ -67,13 +67,13 @@ public class Sender {
 	public void transmit(int seqNum) {
 
 		byte[] dataPart = getData(seqNum);
-		int eop = headerSize + dataPart.length;
+		int eop = headSize + dataPart.length;
 		int last_packet = 0;
 		if(seqNum==lastSeqNum) {
 			last_packet = 1;
 		}
 
-		byte[] packetToSend = new byte[maxPacketSize];
+		byte[] packetToSend = new byte[maxPackSize];
 		byte[] seq_num_bytes = intToBytes(seqNum);
 		byte[] headerBytes = intToBytes(eop);
 		byte[] lastPacket = intToBytes(last_packet);
@@ -81,12 +81,12 @@ public class Sender {
 		System.arraycopy(seq_num_bytes, 0, packetToSend, 0, seq_num_bytes.length);
 		System.arraycopy(headerBytes, 0, packetToSend, seq_num_bytes.length, headerBytes.length);
 		System.arraycopy(lastPacket, 0, packetToSend, seq_num_bytes.length+headerBytes.length, lastPacket.length);
-		System.arraycopy(dataPart, 0, packetToSend, headerSize, dataPart.length);
+		System.arraycopy(dataPart, 0, packetToSend, headSize, dataPart.length);
 
 		DatagramPacket datagram = new DatagramPacket(packetToSend, packetToSend.length, receiver.getAddress(), receiver.getPort());
 
 		try {
-			if(!probability(packetDropChance)) {
+			if(!probability(packDrop)) {
 				socket.send(datagram);
 				System.out.println("Sent message #" +seqNum + ".");
 			}
@@ -99,7 +99,7 @@ public class Sender {
 	}
 
 	private byte[] getData(int seq_num){
-		int room_for_data = (maxPacketSize - headerSize);
+		int room_for_data = (maxPackSize - headSize);
 		byte[] subData;
 		int start = ((seq_num)*room_for_data);
 		int end = start + (room_for_data - 1);
@@ -122,10 +122,10 @@ public class Sender {
         InputStream is = new FileInputStream(filepath);
 
         long length = filepath.length();
-        this.file_size = length;
+        this.fileSize = length;
         this.data = new byte[(int)length];
 
-		this.lastSeqNum = (int)Math.ceil(data.length/(double)maxPacketSize) - 1;
+		this.lastSeqNum = (int)Math.ceil(data.length/(double)maxPackSize) - 1;
 
         int offset = 0;
         int numRead = 0;
@@ -147,29 +147,29 @@ public class Sender {
 		}
 		System.out.println("Recieved  acknowledgment for message #" + seq_num + "\n");
 
-		if(seq_num>last_ack_received) {
-			this.last_ack_received = seq_num;
+		if(seq_num>lastAckRec) {
+			this.lastAckRec = seq_num;
 			updateTimeoutThreads(seq_num);
 		}
 	}
 
 	private void updateTimeoutThreads(int seq_num) {
-		for (int i = 0; i < sender_window.length; i++)
+		for (int i = 0; i < sendWindow.length; i++)
 		{
-			if(sender_window[i]!=null){
-				TimeoutSender timeout_thread = sender_window[i];
+			if(sendWindow[i]!=null){
+				TimeoutSender timeout_thread = sendWindow[i];
 
-				if(timeout_thread.seq_num<=seq_num) {
+				if(timeout_thread.seqNum<=seq_num) {
 					timeout_thread.finished=true;
-					last_frame_sent += 1;
-					if(last_frame_sent <= lastSeqNum) {
-						transmit(last_frame_sent);
-						sender_window[i] = new TimeoutSender(last_frame_sent, (int)timeout, this);
+					lastFrameSent += 1;
+					if(lastFrameSent <= lastSeqNum) {
+						transmit(lastFrameSent);
+						sendWindow[i] = new TimeoutSender(lastFrameSent, (int)timeout, this);
 					} //end if
 					else {
-						this.end_time = System.currentTimeMillis();
-						double runtime = ((this.end_time-this.start_time)/(double)1000);
-						System.out.println("Successfully transferred " + this.filename + " (" + this.file_size
+						this.endTime = System.currentTimeMillis();
+						double runtime = ((this.endTime-this.startTime)/(double)1000);
+						System.out.println("Successfully transferred " + this.filename + " (" + this.fileSize
 						    + " bytes) in " + runtime + " seconds");
 					}
 				}
@@ -187,21 +187,21 @@ public class Sender {
 	{
 		try
 		{
-			this.start_time = System.currentTimeMillis();
-			System.out.println("Sender "+InetAddress.getLocalHost().getHostAddress()+" listening on UDP port "+this.senderPort);
-            this.socket = new DatagramSocket(senderPort);
+			this.startTime = System.currentTimeMillis();
+			System.out.println("Sender "+InetAddress.getLocalHost().getHostAddress()+" listening on UDP port "+this.sendPort);
+            this.socket = new DatagramSocket(sendPort);
             new PacketSender(socket, this);
             calculatePackets();
 			prepareFile();
 
-            for (int i = 0; i < sender_window.length; i++)
+            for (int i = 0; i < sendWindow.length; i++)
             {
-            	last_frame_sent+=1;
+            	lastFrameSent+=1;
 
-				if(last_frame_sent<=lastSeqNum)
+				if(lastFrameSent<=lastSeqNum)
 				{
-					transmit(last_frame_sent);
-					sender_window[i] = new TimeoutSender(last_frame_sent, (int)timeout,this);
+					transmit(lastFrameSent);
+					sendWindow[i] = new TimeoutSender(lastFrameSent, (int)timeout,this);
 				}
 			}
             return true;
@@ -260,12 +260,12 @@ public class Sender {
 	}
 
 	public int getProbabilityOfDrop() {
-		return packetDropChance;
+		return packDrop;
 	}
 
 
 	public void setProbabilityOfDrop(int probabilityOfDrop) {
-		this.packetDropChance = probabilityOfDrop;
+		this.packDrop = probabilityOfDrop;
 	}
 
 }

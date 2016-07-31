@@ -13,26 +13,26 @@ public class Reciever {
     private int port = 1025;
     private int sendingPort;
     private static long windowSize;
-    public static int maxPacketSize;
+    public static int maxPackSize;
 
-	private int max_num_frames;
-    private int last_seq_num = -1;
-    private int[] receivedPacketsArray;
-    private byte[][] received_bytes;
+	private int maxFrames;
+    private int lastSeqNum = -1;
+    private int[] recPackArray;
+    private byte[][] recBytes;
     private String filename = null;
     private FileOutputStream fileOut;
-    private boolean initial_connection = false;
-    private long file_size=0;
-    private long start_time;
+    private boolean initConn = false;
+    private long fileSize=0;
+    private long startTime;
     private long end_time;
-    private int last_frame_received = -1;
-    private int largest_acceptable_frame = 0;
+    private int lastFrameRcv = -1;
+    private int largeAccFrame = 0;
 
 	public static void main(String[] args) {
 
 		Reciever receiver = new Reciever();
 		windowSize = Integer.parseInt(JOptionPane.showInputDialog("What is the window size?"));
-		maxPacketSize = Integer.parseInt(JOptionPane.showInputDialog("What is the packet size in bytes?"));
+		maxPackSize = Integer.parseInt(JOptionPane.showInputDialog("What is the packet size in bytes?"));
 		receiver.filename = ("./received/" + JOptionPane.showInputDialog("What is the received file name?"));
 		System.out.println("receiver filename: " + receiver.filename);
 		receiver.receiveFile();
@@ -43,18 +43,18 @@ public class Reciever {
 			int mtu = socket.getSendBufferSize();
 			int result = (int)Math.ceil(windowSize/(double)mtu);
 			if (result==1) {
-				this.max_num_frames = result;
+				this.maxFrames = result;
 			}
 			else {
-				this.max_num_frames = (int)Math.floor(windowSize/(double)mtu);
+				this.maxFrames = (int)Math.floor(windowSize/(double)mtu);
 			}
 
-			this.receivedPacketsArray = new int[max_num_frames];
-			this.received_bytes = new byte[max_num_frames][maxPacketSize-headerSize];
-			for (int i = 0; i < receivedPacketsArray.length; i++) {
-				this.receivedPacketsArray[i]=0;
+			this.recPackArray = new int[maxFrames];
+			this.recBytes = new byte[maxFrames][maxPackSize-headerSize];
+			for (int i = 0; i < recPackArray.length; i++) {
+				this.recPackArray[i]=0;
 			}
-			this.largest_acceptable_frame = last_frame_received + max_num_frames;
+			this.largeAccFrame = lastFrameRcv + maxFrames;
 		}
 		catch (SocketException e) {
 			e.printStackTrace();
@@ -91,24 +91,24 @@ public class Reciever {
 		int eop = byteArrayToInt(eop_bytes);
 		int last_packet = byteArrayToInt(last_packet_bytes);
 
-		if(seq_num==0 && !initial_connection){
-			initial_connection = true;
-			this.start_time = System.currentTimeMillis();
+		if(seq_num==0 && !initConn){
+			initConn = true;
+			this.startTime = System.currentTimeMillis();
 			System.out.println("Sender: "+packet.getAddress()+":"+packet.getPort());
 		}
 
 		if(last_packet!=1)
 		{
-			payload = new byte[(maxPacketSize - headerSize)];
+			payload = new byte[(maxPackSize - headerSize)];
 			System.arraycopy(packetData, headerSize, payload, 0, payload.length);
 		}
 		else {
-			this.last_seq_num = seq_num;
+			this.lastSeqNum = seq_num;
 			payload = new byte[eop-headerSize];
 			System.arraycopy(packetData, headerSize, payload, 0, eop-headerSize);
 		}
 
-		boolean acceptPacket = (seq_num<=largest_acceptable_frame);
+		boolean acceptPacket = (seq_num<=largeAccFrame);
 		if (acceptPacket) {
 			acceptPacket(seq_num, eop, last_packet, payload);
 		}
@@ -116,22 +116,22 @@ public class Reciever {
 
 	private void acceptPacket(int seq_num, int eop, int last_packet, byte[] payload) {
 
-		if(last_frame_received >= seq_num){
+		if(lastFrameRcv >= seq_num){
 			sendACK(seq_num);
 		}
 		else {
-			receivedPacketsArray[seq_num-last_frame_received-1] = 1;
-			received_bytes[seq_num-last_frame_received-1] = payload;
+			recPackArray[seq_num-lastFrameRcv-1] = 1;
+			recBytes[seq_num-lastFrameRcv-1] = payload;
 			int adjustedWindow = 0;
 			int i_val = 0;
-			for (int i = 0; i < receivedPacketsArray.length; i++) {
-				if(receivedPacketsArray[i]==1) {
-					last_frame_received+=1;
-					largest_acceptable_frame+=1;
-					this.file_size+=payload.length;
+			for (int i = 0; i < recPackArray.length; i++) {
+				if(recPackArray[i]==1) {
+					lastFrameRcv+=1;
+					largeAccFrame+=1;
+					this.fileSize+=payload.length;
 					System.out.println("Message #" + seq_num + " received.");
-					processPayload(last_frame_received, received_bytes[i]);
-					sendACK(last_frame_received);
+					processPayload(lastFrameRcv, recBytes[i]);
+					sendACK(lastFrameRcv);
 					System.out.println("Sent acknowledgement for message #" + seq_num + "\n");
 				}
 				else {
@@ -141,12 +141,12 @@ public class Reciever {
 				i_val = i;
 			}
 
-			if(i_val==receivedPacketsArray.length-1) {
-				adjustedWindow = receivedPacketsArray.length;
+			if(i_val==recPackArray.length-1) {
+				adjustedWindow = recPackArray.length;
 			}
 
 			for (int i = 0; i < adjustedWindow; i++) {
-				receivedPacketsArray[i]=0;
+				recPackArray[i]=0;
 			}
 		}
 	}
@@ -156,11 +156,11 @@ public class Reciever {
 			this.fileOut.write(payload);
 			this.fileOut.flush();
 
-			if(seq_num==last_seq_num){
+			if(seq_num==lastSeqNum){
 				this.fileOut.close();
 				this.end_time = System.currentTimeMillis();
-				double runtime = ((this.end_time-this.start_time)/(double)1000);
-				System.out.println("Successfully received " + this.filename + " (" + this.file_size + " bytes) in "
+				double runtime = ((this.end_time-this.startTime)/(double)1000);
+				System.out.println("Successfully received " + this.filename + " (" + this.fileSize + " bytes) in "
 				    + runtime + " seconds");
 			}
 		} catch (IOException e) {
