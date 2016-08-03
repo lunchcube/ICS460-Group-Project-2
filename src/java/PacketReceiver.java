@@ -23,7 +23,7 @@ public class PacketReceiver implements Runnable {
 	public void run() {
 		while(true) {
 			try {
-				byte [] bytesIn = new byte[reciever.maxPackSize];
+				byte[] bytesIn = new byte[reciever.maxPackSize];
 				DatagramPacket packet = new DatagramPacket(bytesIn,bytesIn.length);
 				reciever.socket.receive(packet);
 				reciever.processPacket(packet);

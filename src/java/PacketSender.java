@@ -22,7 +22,7 @@ public class PacketSender implements Runnable {
 	public void run() {
 		while(true) {
 			try {
-				byte [] ackIn = new byte[4];
+				byte[] ackIn = new byte[4];
 				DatagramPacket packet = new DatagramPacket(ackIn,ackIn.length);
 				socket.receive(packet);
 				sender.processACK(packet);

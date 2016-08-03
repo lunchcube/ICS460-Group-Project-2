@@ -1,7 +1,6 @@
 
 
-public class TimeoutSender extends Thread
-{
+public class Timeout extends Thread {
 	private int timeout;
 	private int elapsed;
 	public int rate = 1000;
@@ -9,7 +8,7 @@ public class TimeoutSender extends Thread
 	public int seqNum;
 	private Sender sender;
 
-	public TimeoutSender(int seq_num, int millis, Sender sender) {
+	public Timeout(int seq_num, int millis, Sender sender) {
 		this.seqNum = seq_num;
 		this.timeout = millis;
 		elapsed = 0;
@@ -25,11 +24,9 @@ public class TimeoutSender extends Thread
 		while(!finished) {
 			try {
 				Thread.sleep(rate);
-			}
-			catch (InterruptedException ioe) {
+			} catch (InterruptedException ioe) {
 				continue;
 			}
-
 			synchronized (this) {
 				elapsed += rate;
 				if (elapsed > this.timeout){
@@ -39,8 +36,7 @@ public class TimeoutSender extends Thread
 		}
 	}
 
-	public void timeout()
-	{
+	public void timeout() {
 		System.out.println("Message #" + this.seqNum + " timed out. Resending...");
 		sender.transmit(this.seqNum);
 		reset();
